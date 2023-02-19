@@ -1,0 +1,162 @@
+#%% Create Classes & probabilities
+
+import numpy as np
+from matplotlib import pyplot as plt
+import matplotlib.cm as cm
+import networkx as nx
+from PIL import Image
+import numpy as np
+import math
+import networkx as nx
+
+
+
+
+class seed:
+    def __init__(self,id):
+        self.id=id
+        self.refs=[]
+        self.waves=0
+        self.totRefs=np.random.choice([0,1,2,3]) #using uniform distribution
+        
+    def refer(self, newParticipant):
+        newParticipant.referral=self
+        self.refs.append(newParticipant)
+   
+    def __str__(self):
+        return str(self.id) 
+    
+    def __repr__(self):
+        return str(self.id)     
+        
+    
+    
+class waveParticipant:
+    def __init__(self, participantNumber):
+        self.refs=[]
+        self.referral=None
+        self.id = participantNumber
+        self.totRefs=np.random.choice([0,1,2,3]) #using uniform distribution
+        
+    def refer(self, newParticipant):
+        newParticipant.referral=self
+        self.refs.append(newParticipant)
+        
+    def __str__(self):
+        return str(self.id) 
+    
+    def __repr__(self):
+        return str(self.id)   
+
+
+
+
+def nextGen(refs, totParticipants, unfullfilled): #takes input refs= [ref11, ref12, ref13, ref14...etc]
+    nextRefs=[]
+    #print(refs)
+    for r in refs:
+        #check if done
+        if len(r.refs)  == r.totRefs: #done
+            pass
+        else: #create next gen
+            for i in range(0,r.totRefs):
+                r.refer(waveParticipant(totParticipants))
+                if totParticipants==150:
+                    unfullfilled+=1
+                else:
+                    totParticipants+=1
+            
+        for r2 in r.refs:
+                nextRefs.append(r2) #add to next refs
+        
+    if unfullfilled == 0:
+       return totParticipants,unfullfilled, nextRefs#returns nextRefs=[ref21, ref22, re23, ... etc.]
+    else:
+       return totParticipants,unfullfilled, nextRefs
+   
+    
+    
+#%%Simulation Function
+def Sim(rSeed):
+          
+    np.random.seed(rSeed)       
+    
+    #create seeds
+    wave1=[]
+    seeds=[]
+    unfullfilled=0
+    for i in range(0,5):
+        seeds.append(seed(i))
+        
+    #assign referalls to seeds, creating waveGen1
+    totParticipants=5
+    for s in seeds:
+        for i in range(0,s.totRefs): #for every new ref
+            newWave=waveParticipant(totParticipants)
+            s.refer(newWave)
+            wave1.append(newWave)
+            totParticipants+=1 #increment numParticipants
+            
+    nextRef=wave1
+    gens=1
+    
+    while totParticipants<155:
+        #print("gen: ",gens)
+        totParticipants,unfullfilled, nextRef =nextGen(nextRef, totParticipants, unfullfilled)
+        gens+=1
+        if gens>145:
+            return [-1,-1]
+        
+    #print("Wave Generations: ",gens)
+    #print("Number Unfullfilled: ",unfullfilled)
+    
+    result=[gens,unfullfilled]  
+    
+    return result
+
+
+
+#%%Run Simulation a lot
+results=[]
+for i in range(0,20000):
+    results.append(Sim(i))
+    if i%10==0:
+        print(i)
+
+
+#%% Create Graph
+
+unful=[]
+gens=[]
+for gs, un in results:
+    if gs>0:
+        gens.append(gs)
+        unful.append(un)
+    
+plt.figure(1)
+count, bins_count = np.histogram(unful,bins=max(unful)-min(unful))
+pdf=count/sum(count)
+cdf=np.cumsum(pdf)
+
+
+plt.plot(bins_count[1:], pdf, color="red", label="PDF")
+plt.plot(bins_count[1:], cdf, label="CDF")
+plt.axhline(y=0.95, color='g', linestyle='-')
+plt.axhline(y=0.5,color='g',linestyle='-')
+plt.plot()
+plt.legend()
+
+plt.figure(2)
+
+   
+count, bins_count = np.histogram(gens,bins=max(unful)-min(unful))
+pdf=count/sum(count)
+cdf=np.cumsum(pdf)
+
+plt.title("Generation CDF")
+plt.axhline(y=0.5,color='g',linestyle='-')
+plt.plot(bins_count[1:], pdf, color="red", label="PDF")
+plt.plot(bins_count[1:], cdf, label="CDF")
+plt.axhline(y=0.95, color='g', linestyle='-')
+plt.plot()
+plt.legend()
